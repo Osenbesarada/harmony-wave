@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>HarmonyWave Products</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <style>
+    body { margin: 0; background: #000; overflow-y: auto; font-family: 'Courier New', monospace; }
+    canvas { display: block; }
+    .vhs-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAIklEQVR4nGP4//8/A27evP//v38YGRmZmZkZGRkZGZmZmRkA1OgI4pLceH0AAAAASUVORK5CYII=') repeat;
+      opacity: 0.5;
+      mix-blend-mode: overlay;
+    }
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(255,255,255,0.15) 2px, transparent 2px);
+      background-size: 100% 2px;
+      pointer-events: none;
+      animation: scanline-move 20s linear infinite;
+    }
+    @keyframes scanline-move {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 8px; }
+    }
+    .header {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #00ccff;
+      font-size: 28px;
+      text-shadow: 0 0 10px rgba(0,204,255,0.5);
+    }
+    .menu {
+      position: absolute;
+      top: 60px;
+      left: 20px;
+      color: #fff;
+      font-size: 20px;
+    }
+    .menu a {
+      color: #00ccff;
+      text-decoration: none;
+      margin-right: 20px;
+      cursor: pointer;
+    }
+    .menu a:hover {
+      text-decoration: underline;
+      color: #ff5555;
+    }
+    .content {
+      position: relative;
+      top: 100px;
+      max-width: 800px;
+      margin: 0 auto;
+      color: #fff;
+      font-size: 18px;
+      text-align: center;
+      text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+    .product-button {
+      display: inline-block;
+      background: #000;
+      border: 1px solid #00ccff;
+      color: #00ccff;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+    }
+    .product-button:hover {
+      color: #ff5555;
+      border-color: #ff5555;
+    }
+    .blood-text {
+      color: #ff5555;
+      text-shadow: 0 0 5px #aa0000;
+      animation: bleed 2s infinite;
+    }
+    @keyframes bleed {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    .shake {
+      animation: shake 0.5s;
+    }
+    @keyframes shake {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(-2px, 2px); }
+      50% { transform: translate(2px, -2px); }
+      75% { transform: translate(-2px, 2px); }
+      100% { transform: translate(0, 0); }
+    }
+    .ad {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      color: #ff5555;
+      font-size: 18px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .ad:hover {
+      color: #aa0000;
+    }
+    .code-input {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #000;
+      color: #00ccff;
+      border: 1px solid #00ccff;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="vhs-overlay"></div>
+  <div class="scanlines"></div>
+  <div class="header">HarmonyWave Products</div>
+  <div class="menu">
+    <a href="index.html">ホーム</a>
+    <a href="products.html">製品</a>
+    <a onclick="showContent('therapy')">サウンドセラピー</a>
+    <a onclick="showContent('contact')">お問い合わせ</a>
+  </div>
+  <div class="content" id="content">
+    <p>音が救済を約束する。</p>
+    <div class="product-button" onclick="playProductSound('earphones')">イヤホンの音を聞く</div>
+    <div class="product-button" onclick="playProductSound('app')">アプリの音を聞く</div>
+  </div>
+  <div class="ad" onclick="showAd()">音を聞け…救われる…</div>
+  <input type="text" class="code-input" id="code-input" placeholder="コードを入力...">
+  <audio id="earphones-audio" src="assets/earphones_promo.mp3"></audio>
+  <audio id="app-audio" src="assets/app_promo.mp3"></audio>
+  <script>
+    let contents = {
+      products: {
+        default: "音が救済を約束する。",
+        night: "夜の音は危険だ。慎重に聞け。",
+        worship: "聖歌を聞け。従え。",
+        forbidden: "禁忌の時間に音を聞くな。静寂を守れ。"
+      },
+      therapy: {
+        default: "サウンドセラピーで心のノイズを消去。セミナー開催中。",
+        night: "夜のセラピーは特別です。音を信じなさい。",
+        worship: "礼拝のセラピーに参加しなさい。音が導く。",
+        forbidden: "禁忌の時間にセラピーは行わない。音を停止せよ。"
+      },
+      contact: {
+        default: "お問い合わせはこちら。音は常にあなたと共にある。",
+        night: "夜は音に耳を傾けなさい。お問い合わせは不要。",
+        worship: "礼拝中はお問い合わせを控えてください。",
+        forbidden: "禁忌の時間に連絡するな。静寂が答えだ。"
+      }
+    };
+    let horrorTriggers = {
+      default: [
+        "耳が…聞こえる…",
+        "あなたの音は消せない…",
+        "音があなたを選んだ。",
+        { text: "1999年、イヤホン着用者が耳から血を流し失踪。", duration: 60000 }
+      ],
+      night: [
+        "静寂を破るな…",
+        "あなたの音が記録された…",
+        "耳を塞いでも無駄だ。",
+        { text: "2005年、アプリ使用者が『音の命令』に従い行方不明。", duration: 60000 }
+      ],
+      worship: [
+        "聖歌が始まる…",
+        "音に従え。従え。",
+        "礼拝の音を拒むな。",
+        { text: "1987年、金曜の礼拝中、男性が『完全な音』に呼ばれ消滅。", duration: 60000 }
+      ],
+      forbidden: [
+        "音を出すな…影が来る…",
+        "禁忌を破ると静寂が怒る。",
+        "耳を閉じなさい。",
+        { text: "2015年、金曜深夜、信者が禁忌を破り音を出し、耳だけが残された。", duration: 60000 }
+      ]
+    };
+    let audioContext = null;
+    let oscillator = null;
+    let worshipSound = null;
+    let micStream = null;
+    let currentAudio = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.error("AudioContext initialization failed:", e);
+      }
+      const inputElement = document.getElementById('code-input');
+      if (inputElement) {
+        inputElement.addEventListener('input', checkCode);
+      } else {
+        console.error("Input element 'code-input' not found on DOM load.");
+      }
+      setup();
+      updateContentByTime();
+      setInterval(updateContentByTime, 60000);
+    });
+
+    function setup() {
+      try {
+        createCanvas(windowWidth, windowHeight);
+        background(0);
+        frameRate(60);
+      } catch (e) {
+        console.error("p5.js setup failed:", e);
+      }
+    }
+
+    function draw() {
+      try {
+        background(0);
+        if (frameCount % 60 < 10) {
+          push();
+          translate(random(-2, 2), random(-2, 2));
+          fill(255, 0, 0, 20);
+          rect(-2, 0, width, height);
+          fill(0, 255, 0, 20);
+          rect(2, 0, width, height);
+          fill(0, 0, 255, 20);
+          rect(0, 2, width, height);
+          pop();
+        }
+        if (frameCount % 90 < 15) {
+          stroke(0, 204, 255, 100);
+          for (let y = 0; y < height; y += 10) {
+            let x = width / 2 + sin(frameCount * 0.05 + y * 0.01) * 100;
+            line(x - 50, y, x + 50, y);
+          }
+        }
+        if (random() < 0.01) {
+          fill(255, 255, 255, 50);
+          rect(0, 0, width, height);
+        }
+      } catch (e) {
+        console.error("p5.js draw failed:", e);
+      }
+    }
+
+    function getTimeState() {
+      let now = new Date();
+      let jstOffset = 9 * 60 * 60 * 1000;
+      let jstTime = new Date(now.getTime() + jstOffset);
+      let day = jstTime.getUTCDay();
+      let hours = jstTime.getUTCHours();
+      let isFridayWorship = day === 5 && hours >= 10 && hours < 13;
+      let isFridayForbidden = day === 5 && hours >= 0 && hours < 6;
+
+      if (isFridayWorship) return 'worship';
+      if (isFridayForbidden) return 'forbidden';
+      if (hours >= 0 && hours < 6) return 'night';
+      return 'default';
+    }
+
+    function updateContentByTime() {
+      let contentElement = document.getElementById('content');
+      if (!contentElement) {
+        console.error("Content element 'content' not found.");
+        return;
+      }
+      let timeState = getTimeState();
+      if (timeState === 'forbidden') {
+        contentElement.innerHTML = '<p>禁忌の時間に音を聞くな。静寂を守れ。</p>';
+      } else {
+        contentElement.innerHTML = `
+          <p>音が救済を約束する。</p>
+          <div class="product-button" onclick="playProductSound('earphones')">イヤホンの音を聞く</div>
+          <div class="product-button" onclick="playProductSound('app')">アプリの音を聞く</div>
+        `;
+      }
+      if (timeState === 'worship' && !worshipSound) {
+        playWorshipSound();
+      } else if (timeState !== 'worship' && worshipSound) {
+        stopWorshipSound();
+      }
+      if (timeState === 'forbidden') {
+        playSilenceNoise();
+      }
+    }
+
+    function playProductSound(product) {
+      let contentElement = document.getElementById('content');
+      if (!contentElement) {
+        console.error("Content element 'content' not found.");
+        return;
+      }
+      let timeState = getTimeState();
+      if (timeState === 'forbidden') {
+        contentElement.innerHTML = '<p>禁忌の時間に音を聞くな。静寂を守れ。</p>';
+        playSilenceNoise();
+        return;
+      }
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+      let audioId = product === 'earphones' ? 'earphones-audio' : 'app-audio';
+      currentAudio = document.getElementById(audioId);
+      if (!currentAudio) {
+        console.error(`Audio element '${audioId}' not found.`);
+        return;
+      }
+      try {
+        currentAudio.play();
+        console.debug(`Playing ${product} promo audio`);
+      } catch (e) {
+        console.error(`Failed to play ${product} audio:`, e);
+      }
+      let horrorChance = product === 'earphones' ? 0.2 : 0.15;
+      let morseChance = product === 'earphones' ? 0.05 : 0.03;
+      let deathChance = product === 'earphones' ? 0.02 : 0.01;
+      if (Math.random() < horrorChance) {
+        playHorrorSound();
+        let trigger = horrorTriggers[timeState][Math.floor(Math.random() * horrorTriggers[timeState].length)];
+        let message = typeof trigger === 'string' ? trigger : trigger.text;
+        let duration = typeof trigger === 'string' ? 30000 : trigger.duration;
+        contentElement.innerHTML = `<p class="${Math.random() < 0.1 ? 'blood-text' : ''} ${Math.random() < 0.05 ? 'shake' : ''}">${message}</p>`;
+        setTimeout(() => {
+          let contentElement = document.getElementById('content');
+          if (contentElement) {
+            updateContentByTime();
+          }
+        }, duration);
+        if (Math.random() < 0.02 && Math.random() < deathChance) {
+          setTimeout(() => {
+            contentElement.style.opacity = '0';
+            setTimeout(() => {
+              contentElement.style.opacity = '1';
+            }, 1000);
+          }, 1000);
+        }
+      }
+      if (Math.random() < morseChance) {
+        playMorse(product === 'earphones' ? 'SHADOW' : 'FEAR');
+      }
+    }
+
+    function showAd() {
+      let contentElement = document.getElementById('content');
+      if (!contentElement) {
+        console.error("Content element 'content' not found.");
+        return;
+      }
+      let timeState = getTimeState();
+      contentElement.innerText = timeState === 'worship' ? "聖歌を聞きなさい…従いなさい…" : 
+                                timeState === 'forbidden' ? "静寂を守れ…音は禁忌だ…" : 
+                                "音を聞け…救われる…";
+      playHorrorSound();
+      setTimeout(() => {
+        let contentElement = document.getElementById('content');
+        if (!contentElement) {
+          console.error("Content element 'content' not found in timeout.");
+          return;
+        }
+        updateContentByTime();
+        if (Math.random() < 0.3) {
+          let trigger = horrorTriggers[timeState][Math.floor(Math.random() * horrorTriggers[timeState].length)];
+          let message = typeof trigger === 'string' ? trigger : trigger.text;
+          let duration = typeof trigger === 'string' ? 30000 : trigger.duration;
+          contentElement.innerText = message;
+          setTimeout(() => {
+            let contentElement = document.getElementById('content');
+            if (contentElement) {
+              updateContentByTime();
+            }
+          }, duration);
+        }
+      }, 30000);
+    }
+
+    function playHorrorSound() {
+      if (!audioContext) return;
+      if (oscillator) oscillator.stop();
+      try {
+        oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(80, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 500);
+        if (Math.random() < 0.2) {
+          let scream = audioContext.createOscillator();
+          scream.type = 'sine';
+          scream.frequency.setValueAtTime(800 + Math.random() * 400, audioContext.currentTime);
+          let screamGain = audioContext.createGain();
+          screamGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+          scream.connect(screamGain);
+          screamGain.connect(audioContext.destination);
+          scream.start();
+          setTimeout(() => scream.stop(), 500);
+        }
+        console.debug("playHorrorSound: frequency=80+800-1200, duration=500");
+      } catch (e) {
+        console.error("playHorrorSound failed:", e);
+      }
+    }
+
+    function playWorshipSound() {
+      if (!audioContext || worshipSound) return;
+      try {
+        worshipSound = audioContext.createOscillator();
+        worshipSound.type = 'sine';
+        worshipSound.frequency.setValueAtTime(200, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        worshipSound.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        worshipSound.start();
+        let noise = audioContext.createBufferSource();
+        let buffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
+        let data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = Math.random() * 0.2 - 0.1;
+        }
+        noise.buffer = buffer;
+        let noiseGain = audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        noise.start();
+        noise.loop = true;
+        worshipSound.noise = noise;
+        console.debug("playWorshipSound: frequency=200, duration=loop");
+      } catch (e) {
+        console.error("playWorshipSound failed:", e);
+      }
+    }
+
+    function stopWorshipSound() {
+      if (worshipSound) {
+        try {
+          worshipSound.stop();
+          worshipSound.noise.stop();
+          worshipSound = null;
+        } catch (e) {
+          console.error("stopWorshipSound failed:", e);
+        }
+      }
+    }
+
+    function playSilenceNoise() {
+      if (!audioContext) return;
+      if (oscillator) oscillator.stop();
+      try {
+        oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(30 + Math.random() * 20, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.02, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 1000);
+        console.debug("playSilenceNoise: frequency=30-50, duration=1000");
+      } catch (e) {
+        console.error("playSilenceNoise failed:", e);
+      }
+    }
+
+    function playMorse(code) {
+      if (!audioContext) return;
+      const morse = {
+        'S': '...', 'H': '....', 'A': '.-', 'D': '-..', 'O': '---',
+        'W': '.--', 'F': '..-.', 'E': '.', 'R': '.-.'
+      };
+      let sequence = code.split('').map(c => morse[c]).join('/');
+      let t = audioContext.currentTime;
+      let dot = 0.2;
+      sequence.split('').forEach((symbol, i) => {
+        if (symbol === '.') {
+          let osc = audioContext.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(100, t + i * dot);
+          let gain = audioContext.createGain();
+          gain.gain.setValueAtTime(0.05, t + i * dot);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(t + i * dot);
+          osc.stop(t + i * dot + dot);
+        } else if (symbol === '-') {
+          let osc = audioContext.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(100, t + i * dot);
+          let gain = audioContext.createGain();
+          gain.gain.setValueAtTime(0.05, t + i * dot);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(t + i * dot);
+          osc.stop(t + i * dot + dot * 3);
+        }
+      });
+      console.debug(`playMorse: code=${code}, duration=${sequence.length * dot}`);
+    }
+
+    async function startMicrophone() {
+      if (!audioContext) return;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let source = audioContext.createMediaStreamSource(micStream);
+        let analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        let data = new Uint8Array(analyser.frequencyBinCount);
+        setTimeout(() => {
+          if (micStream) micStream.getTracks().forEach(track => track.stop());
+        }, 3000);
+      } catch (e) {
+        console.error("Microphone access failed:", e);
+      }
+    }
+
+    function playWhisper() {
+      if (!audioContext) return;
+      try {
+        let oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(300 + Math.random() * 200, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 3000);
+        console.debug("playWhisper: frequency=300-500, duration=3000");
+      } catch (e) {
+        console.error("playWhisper failed:", e);
+      }
+    }
+
+    function checkCode() {
+      let inputElement = document.getElementById('code-input');
+      let contentElement = document.getElementById('content');
+      if (!inputElement || !contentElement) {
+        console.error("Input or content element not found.");
+        return;
+      }
+      let input = inputElement.value.trim().toUpperCase();
+      if (input === '440HZ') {
+        contentElement.innerText = "接続成功…儀式の音を聞け…";
+        setTimeout(() => {
+          let contentElement = document.getElementById('content');
+          if (contentElement) {
+            contentElement.innerHTML = "儀式の音声：<a href='ritual.mp3'>ritual.mp3</a><br>コード：<a href='code.txt'>code.txt</a>";
+          }
+        }, 30000);
+      } else if (input === 'OTO') {
+        contentElement.innerText = "接続成功…聖典の扉が開かれた…";
+        setTimeout(() => {
+          window.location.href = 'scripture.html';
+        }, 30000);
+      } else if (input === 'FIND') {
+        contentElement.innerText = "接続成功…音があなたを見つけた…";
+        playWhisper();
+        startMicrophone();
+        if (audioContext) {
+          try {
+            let noise = audioContext.createOscillator();
+            noise.type = 'sine';
+            noise.frequency.setValueAtTime(100, audioContext.currentTime);
+            let gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+            noise.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            noise.start();
+            setTimeout(() => noise.stop(), 1500);
+            console.debug("checkCode: FiND noise, frequency=100, duration=1500");
+          } catch (e) {
+            console.error("FiND noise failed:", e);
+          }
+        }
+        setTimeout(() => {
+          window.location.href = 'missing.html';
+        }, 6000);
+      } else if (input === 'BLOOD') {
+        contentElement.innerHTML = `<p class="blood-text">血の音が聞こえる…</p>`;
+        playHorrorSound();
+        setTimeout(() => {
+          window.location.href = 'missing.html';
+        }, 6000);
+      }
+    }
+
+    window.addEventListener('unload', () => {
+      stopWorshipSound();
+      if (micStream) {
+        try {
+          micStream.getTracks().forEach(track => track.stop());
+        } catch (e) {
+          console.error("Microphone cleanup failed:", e);
+        }
+      }
+      if (currentAudio) {
+        currentAudio.pause();
+      }
+    });
+  </script>
+</body>
+</html>
