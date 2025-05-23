@@ -5,7 +5,7 @@
   <title>HarmonyWave Audio</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
   <style>
-    body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+    body { margin: 0; background: #000; overflow-y: auto; font-family: 'Courier New', monospace; }
     canvas { display: block; }
     .vhs-overlay {
       position: absolute;
@@ -157,12 +157,17 @@
         { text: "2015年、金曜深夜、信者が禁忌を破り音を出し、翌朝耳だけが残された。", duration: 60000 }
       ]
     };
-    let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let audioContext = null;
     let oscillator = null;
     let worshipSound = null;
     let micStream = null;
 
     document.addEventListener('DOMContentLoaded', () => {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.error("AudioContext initialization failed:", e);
+      }
       const inputElement = document.getElementById('code-input');
       if (inputElement) {
         inputElement.addEventListener('input', checkCode);
@@ -175,34 +180,42 @@
     });
 
     function setup() {
-      createCanvas(windowWidth, windowHeight);
-      background(0);
-      frameRate(60);
+      try {
+        createCanvas(windowWidth, windowHeight);
+        background(0);
+        frameRate(60);
+      } catch (e) {
+        console.error("p5.js setup failed:", e);
+      }
     }
 
     function draw() {
-      background(0);
-      if (frameCount % 60 < 10) {
-        push();
-        translate(random(-2, 2), random(-2, 2));
-        fill(255, 0, 0, 20);
-        rect(-2, 0, width, height);
-        fill(0, 255, 0, 20);
-        rect(2, 0, width, height);
-        fill(0, 0, 255, 20);
-        rect(0, 2, width, height);
-        pop();
-      }
-      if (frameCount % 90 < 15) {
-        stroke(0, 204, 255, 100);
-        for (let y = 0; y < height; y += 10) {
-          let x = width / 2 + sin(frameCount * 0.05 + y * 0.01) * 100;
-          line(x - 50, y, x + 50, y);
+      try {
+        background(0);
+        if (frameCount % 60 < 10) {
+          push();
+          translate(random(-2, 2), random(-2, 2));
+          fill(255, 0, 0, 20);
+          rect(-2, 0, width, height);
+          fill(0, 255, 0, 20);
+          rect(2, 0, width, height);
+          fill(0, 0, 255, 20);
+          rect(0, 2, width, height);
+          pop();
         }
-      }
-      if (random() < 0.01) {
-        fill(255, 255, 255, 50);
-        rect(0, 0, width, height);
+        if (frameCount % 90 < 15) {
+          stroke(0, 204, 255, 100);
+          for (let y = 0; y < height; y += 10) {
+            let x = width / 2 + sin(frameCount * 0.05 + y * 0.01) * 100;
+            line(x - 50, y, x + 50, y);
+          }
+        }
+        if (random() < 0.01) {
+          fill(255, 255, 255, 50);
+          rect(0, 0, width, height);
+        }
+      } catch (e) {
+        console.error("p5.js draw failed:", e);
       }
     }
 
@@ -228,7 +241,7 @@
         return;
       }
       let timeState = getTimeState();
-      contentElement.innerHTML = contents['home'][timeState];
+      contentElement.innerHTML = contents['home'][timeState] || 'エラー：コンテンツが読み込めませんでした。';
       if (timeState === 'worship' && !worshipSound) {
         playWorshipSound();
       } else if (timeState !== 'worship' && worshipSound) {
@@ -243,7 +256,7 @@
         return;
       }
       let timeState = getTimeState();
-      let content = contents[page][timeState];
+      let content = contents[page][timeState] || 'エラー：ページが見つかりませんでした。';
       contentElement.innerHTML = content;
       if (page === 'products' && Math.random() < 0.2) {
         playHorrorSound();
@@ -278,7 +291,7 @@
           return;
         }
         let timeState = getTimeState();
-        contentElement.innerText = contents['home'][timeState];
+        contentElement.innerText = contents['home'][timeState] || 'エラー：コンテンツが読み込めませんでした。';
         if (Math.random() < 0.3) {
           let trigger = horrorTriggers[timeState][Math.floor(Math.random() * horrorTriggers[timeState].length)];
           let message = typeof trigger === 'string' ? trigger : trigger.text;
@@ -287,7 +300,7 @@
           setTimeout(() => {
             let contentElement = document.getElementById('content');
             if (contentElement) {
-              contentElement.innerText = contents['home'][timeState];
+              contentElement.innerText = contents['home'][timeState] || 'エラー：コンテンツが読み込めませんでした。';
             }
           }, duration);
         }
@@ -295,55 +308,69 @@
     }
 
     function playHorrorSound() {
+      if (!audioContext) return;
       if (oscillator) oscillator.stop();
-      oscillator = audioContext.createOscillator();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(100 + Math.random() * 50, audioContext.currentTime);
-      let gainNode = audioContext.createGain();
-      gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.start();
-      setTimeout(() => oscillator.stop(), 500);
-      console.debug("playHorrorSound: frequency=100-150, duration=500");
+      try {
+        oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(100 + Math.random() * 50, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 500);
+        console.debug("playHorrorSound: frequency=100-150, duration=500");
+      } catch (e) {
+        console.error("playHorrorSound failed:", e);
+      }
     }
 
     function playWorshipSound() {
-      if (worshipSound) return;
-      worshipSound = audioContext.createOscillator();
-      worshipSound.type = 'sine';
-      worshipSound.frequency.setValueAtTime(200, audioContext.currentTime);
-      let gainNode = audioContext.createGain();
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      worshipSound.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      worshipSound.start();
-      let noise = audioContext.createBufferSource();
-      let buffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
-      let data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = Math.random() * 0.2 - 0.1;
+      if (!audioContext || worshipSound) return;
+      try {
+        worshipSound = audioContext.createOscillator();
+        worshipSound.type = 'sine';
+        worshipSound.frequency.setValueAtTime(200, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        worshipSound.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        worshipSound.start();
+        let noise = audioContext.createBufferSource();
+        let buffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
+        let data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) {
+          data[i] = Math.random() * 0.2 - 0.1;
+        }
+        noise.buffer = buffer;
+        let noiseGain = audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        noise.start();
+        noise.loop = true;
+        worshipSound.noise = noise;
+        console.debug("playWorshipSound: frequency=200, duration=loop");
+      } catch (e) {
+        console.error("playWorshipSound failed:", e);
       }
-      noise.buffer = buffer;
-      let noiseGain = audioContext.createGain();
-      noiseGain.gain.setValueAtTime(0.05, audioContext.currentTime);
-      noise.connect(noiseGain);
-      noiseGain.connect(audioContext.destination);
-      noise.start();
-      noise.loop = true;
-      worshipSound.noise = noise;
-      console.debug("playWorshipSound: frequency=200, duration=loop");
     }
 
     function stopWorshipSound() {
       if (worshipSound) {
-        worshipSound.stop();
-        worshipSound.noise.stop();
-        worshipSound = null;
+        try {
+          worshipSound.stop();
+          worshipSound.noise.stop();
+          worshipSound = null;
+        } catch (e) {
+          console.error("stopWorshipSound failed:", e);
+        }
       }
     }
 
     async function startMicrophone() {
+      if (!audioContext) return;
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         let source = audioContext.createMediaStreamSource(micStream);
@@ -360,27 +387,28 @@
     }
 
     function playWhisper() {
-      let oscillator = audioContext.createOscillator();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(300 + Math.random() * 200, audioContext.currentTime);
-      let gainNode = audioContext.createGain();
-      gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.start();
-      setTimeout(() => oscillator.stop(), 3000);
-      console.debug("playWhisper: frequency=300-500, duration=3000");
+      if (!audioContext) return;
+      try {
+        let oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(300 + Math.random() * 200, audioContext.currentTime);
+        let gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 3000);
+        console.debug("playWhisper: frequency=300-500, duration=3000");
+      } catch (e) {
+        console.error("playWhisper failed:", e);
+      }
     }
 
     function checkCode() {
       let inputElement = document.getElementById('code-input');
-      if (!inputElement) {
-        console.error("Input element 'code-input' not found.");
-        return;
-      }
       let contentElement = document.getElementById('content');
-      if (!contentElement) {
-        console.error("Content element 'content' not found.");
+      if (!inputElement || !contentElement) {
+        console.error("Input or content element not found.");
         return;
       }
       let input = inputElement.value.trim().toUpperCase();
@@ -401,16 +429,22 @@
         contentElement.innerText = "接続成功…音があなたを見つけた…";
         playWhisper();
         startMicrophone();
-        let noise = audioContext.createOscillator();
-        noise.type = 'sine';
-        noise.frequency.setValueAtTime(100, audioContext.currentTime);
-        let gainNode = audioContext.createGain();
-        gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
-        noise.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        noise.start();
-        setTimeout(() => noise.stop(), 1500);
-        console.debug("checkCode: FiND noise, frequency=100, duration=1500");
+        if (audioContext) {
+          try {
+            let noise = audioContext.createOscillator();
+            noise.type = 'sine';
+            noise.frequency.setValueAtTime(100, audioContext.currentTime);
+            let gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+            noise.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            noise.start();
+            setTimeout(() => noise.stop(), 1500);
+            console.debug("checkCode: FiND noise, frequency=100, duration=1500");
+          } catch (e) {
+            console.error("FiND noise failed:", e);
+          }
+        }
         setTimeout(() => {
           window.location.href = 'missing.html';
         }, 6000);
@@ -419,7 +453,13 @@
 
     window.addEventListener('unload', () => {
       stopWorshipSound();
-      if (micStream) micStream.getTracks().forEach(track => track.stop());
+      if (micStream) {
+        try {
+          micStream.getTracks().forEach(track => track.stop());
+        } catch (e) {
+          console.error("Microphone cleanup failed:", e);
+        }
+      }
     });
   </script>
 </body>
