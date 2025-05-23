@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>静寂の調和：行方不明者</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      overflow-y: auto;
+    }
+    canvas { display: block; position: absolute; top: 0; left: 0; z-index: -1; }
+    .vhs-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAIklEQVR4nGP4//8/A27evP//v38YGRmZmZkZGRkZGZmZmRkA1OgI4pLceH0AAAAASUVORK5CYII=') repeat;
+      opacity: 0.5;
+      mix-blend-mode: overlay;
+    }
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(255,255,255,0.15) 2px, transparent 2px);
+      background-size: 100% 2px;
+      pointer-events: none;
+      animation: scanline-move 20s linear infinite;
+    }
+    @keyframes scanline-move {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 8px; }
+    }
+    .header {
+      text-align: center;
+      color: #ff5555;
+      font-size: 32px;
+      text-shadow: 0 0 25px rgba(255,85,85,0.7);
+      margin: 20px 0;
+    }
+    .missing-list {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #fff;
+      font-size: 18px;
+    }
+    th, td {
+      border: 1px solid #00ccff;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #1a1a1a;
+      color: #00ccff;
+    }
+    button {
+      background: #aa0000;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+    }
+    button:hover {
+      background: #770000;
+    }
+    .user-section {
+      text-align: center;
+      margin: 40px 0;
+    }
+    .user-section p {
+      color: #ff5555;
+      font-size: 24px;
+      text-shadow: 0 0 25px rgba(255,85,85,0.7);
+    }
+    .fade-in {
+      animation: fadeIn 3s ease-in;
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="vhs-overlay"></div>
+  <div class="scanlines"></div>
+  <canvas id="canvas"></canvas>
+  <div class="header">静寂の調和：行方不明者</div>
+  <div class="missing-list">
+    <table>
+      <tr><th>名前</th><th>詳細</th><th>回収音声</th></tr>
+      <tr><td>佐藤健</td><td>1999年、礼拝中に消滅。耳だけ残された。</td><td><button onclick="playSound('scream')">再生</button></td></tr>
+      <tr><td>山田花子</td><td>2002年、深夜に脱走。『音の影』に追われた。</td><td><button onclick="playSound('plead')">再生</button></td></tr>
+      <tr><td>田中一郎</td><td>2005年、禁忌の時間に囁き失踪。</td><td><button onclick="playSound('sob')">再生</button></td></tr>
+      <tr><td>鈴木美咲</td><td>2008年、聖歌を拒否し血を流して倒れた。</td><td><button onclick="playSound('breath')">再生</button></td></tr>
+      <tr><td>高橋悠斗</td><td>2011年、モールス信号を真似して消滅。</td><td><button onclick="playSound('drip')">再生</button></td></tr>
+      <tr><td>中村彩</td><td>2014年、施設の壁に血の波形を残して失踪。</td><td><button onclick="playSound('scream_low')">再生</button></td></tr>
+      <tr><td>小林翔</td><td>2017年、深夜にイヤホンを外し影に飲み込まれた。</td><td><button onclick="playSound('plead_long')">再生</button></td></tr>
+      <tr><td>松本玲奈</td><td>2020年、礼拝中に叫び声を上げ消滅。</td><td><button onclick="playSound('sob_short')">再生</button></td></tr>
+      <tr><td>岡田健太</td><td>2022年、禁忌の時間に咳をして血まみれで発見。</td><td><button onclick="playSound('breath_irregular')">再生</button></td></tr>
+      <tr><td>石川真由</td><td>2024年、施設の外で『音』を拒み失踪。</td><td><button onclick="playSound('drip_irregular')">再生</button></td></tr>
+    </table>
+  </div>
+  <div class="user-section">
+    <p class="fade-in">あなたの音…</p>
+    <button onclick="playSound('user')">回収音声を再生</button>
+  </div>
+  <script>
+    let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    let lowNoise = null;
+    let soundPlayedTime = 0;
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      background(0);
+      frameRate(60);
+      playLowNoise();
+    }
+
+    function draw() {
+      if (!width || !height) {
+        console.error("Canvas dimensions not available in draw.");
+        return;
+      }
+      background(0);
+      // 血の波形（音声再生時に振幅増）
+      let waveAmplitude = (millis() - soundPlayedTime) < 1000 ? 170 : 120;
+      stroke(255, 0, 0, 150);
+      strokeWeight(1);
+      for (let y = 0; y < height; y += 15) {
+        let x = width / 2 + sin(frameCount * 0.03 + y * 0.01 + random(-0.1, 0.1)) * waveAmplitude;
+        line(x - 60, y, x + 60, y);
+      }
+      // CRTノイズ
+      if (frameCount % 60 < 10) {
+        push();
+        translate(random(-2, 2), random(-2, 2));
+        fill(255, 0, 0, 20);
+        rect(-2, 0, width, height);
+        fill(0, 255, 0, 20);
+        rect(2, 0, width, height);
+        fill(0, 0, 255, 20);
+        rect(0, 2, width, height);
+        pop();
+      }
+      if (frameCount % 90 < 15) {
+        stroke(0, 204, 255, 50);
+        strokeWeight(1);
+        for (let y = 0; y < height; y += 10) {
+          let x = width / 2 + sin(frameCount * 0.05 + y * 0.01) * 80;
+          line(x - 40, y, x + 40, y);
+        }
+      }
+      if (random() < 0.01) {
+        fill(255, 255, 255, 30);
+        rect(0, 0, width, height);
+      }
+      // ロード時の暗転
+      if (frameCount < 90) {
+        fill(0, 0, 0, 270 - frameCount * 3);
+        rect(0, 0, width, height);
+        fill(255, 85, 85, 255 - frameCount * 2.8);
+        textAlign(CENTER);
+        textSize(24);
+        text("音があなたを…", width / 2, height / 2);
+      }
+    }
+
+    function getTimeState() {
+      let now = new Date();
+      let jstOffset = 9 * 60 * 60 * 1000;
+      let jstTime = new Date(now.getTime() + jstOffset);
+      let day = jstTime.getUTCDay();
+      let hours = jstTime.getUTCHours();
+      let minutes = jstTime.getUTCMinutes();
+      let isFridayWorship = day === 5 && hours >= 10 && hours < 13;
+      let isFridayForbidden = day === 5 && hours >= 0 && hours < 6;
+
+      if (isFridayWorship) return 'worship';
+      if (isFridayForbidden) return 'forbidden';
+      if (hours >= 0 && hours < 6) return 'night';
+      return 'default';
+    }
+
+    function playSound(type) {
+      let oscillator = audioContext.createOscillator();
+      oscillator.type = 'sine';
+      let gainNode = audioContext.createGain();
+      let noise = audioContext.createBufferSource();
+      let buffer = audioContext.createBuffer(1, audioContext.sampleRate * 3, audioContext.sampleRate);
+      let data = buffer.getChannelData(0);
+      let duration, frequency;
+
+      switch (type) {
+        case 'scream':
+          frequency = 800 + Math.random() * 400;
+          duration = 1000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.2 - 0.1) * (i < data.length * 0.5 ? i / (data.length * 0.5) : 1 - (i - data.length * 0.5) / (data.length * 0.5));
+          }
+          break;
+        case 'plead':
+          frequency = 300 + Math.random() * 200;
+          duration = 2000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.15 - 0.075) * (0.5 + Math.sin(i * 0.01));
+          }
+          break;
+        case 'sob':
+          frequency = 200 + Math.random() * 200;
+          duration = 3000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.1 - 0.05) * (0.3 + Math.sin(i * 0.005));
+          }
+          break;
+        case 'breath':
+          frequency = 100 + Math.random() * 100;
+          duration = 2000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.2 - 0.1) * (i % 1000 < 500 ? 1 : 0);
+          }
+          break;
+        case 'drip':
+          frequency = 50 + Math.random() * 50;
+          duration = 3000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() < 0.05) ? (Math.random() * 0.3 - 0.15) : 0;
+          }
+          break;
+        case 'scream_low':
+          frequency = 600 + Math.random() * 300;
+          duration = 1500;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.2 - 0.1) * (i < data.length * 0.5 ? i / (data.length * 0.5) : 1 - (i - data.length * 0.5) / (data.length * 0.5));
+          }
+          break;
+        case 'plead_long':
+          frequency = 300 + Math.random() * 200;
+          duration = 2500;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.15 - 0.075) * (0.5 + Math.sin(i * 0.008));
+          }
+          break;
+        case 'sob_short':
+          frequency = 200 + Math.random() * 200;
+          duration = 2000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.1 - 0.05) * (0.3 + Math.sin(i * 0.007));
+          }
+          break;
+        case 'breath_irregular':
+          frequency = 100 + Math.random() * 100;
+          duration = 2500;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.2 - 0.1) * (Math.random() < 0.7 ? 1 : 0);
+          }
+          break;
+        case 'drip_irregular':
+          frequency = 50 + Math.random() * 50;
+          duration = 3000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() < 0.03) ? (Math.random() * 0.3 - 0.15) : 0;
+          }
+          break;
+        case 'user':
+          frequency = 80 + Math.random() * 50;
+          duration = 3000;
+          for (let i = 0; i < data.length; i++) {
+            data[i] = (Math.random() * 0.2 - 0.1) * (0.5 + Math.sin(i * 0.01));
+          }
+          break;
+      }
+
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.1 + Math.random() * 0.05, audioContext.currentTime);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+      noise.buffer = buffer;
+      let noiseGain = audioContext.createGain();
+      noiseGain.gain.setValueAtTime(0.08, audioContext.currentTime);
+      noise.connect(noiseGain);
+      noiseGain.connect(audioContext.destination);
+      noise.start();
+      setTimeout(() => {
+        oscillator.stop();
+        noise.stop();
+      }, duration);
+      // 追加の低周波ノイズ
+      let extraNoise = audioContext.createOscillator();
+      extraNoise.type = 'sine';
+      extraNoise.frequency.setValueAtTime(80, audioContext.currentTime);
+      let extraGain = audioContext.createGain();
+      extraGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+      extraNoise.connect(extraGain);
+      extraGain.connect(audioContext.destination);
+      extraNoise.start();
+      setTimeout(() => extraNoise.stop(), 500);
+      // ユーザー音用の低周波パルス
+      if (type === 'user') {
+        let pulseNoise = audioContext.createOscillator();
+        pulseNoise.type = 'sine';
+        pulseNoise.frequency.setValueAtTime(60, audioContext.currentTime);
+        let pulseGain = audioContext.createGain();
+        pulseGain.gain.setValueAtTime(0.04, audioContext.currentTime);
+        pulseNoise.connect(pulseGain);
+        pulseGain.connect(audioContext.destination);
+        pulseNoise.start();
+        setTimeout(() => pulseNoise.stop(), 300);
+      }
+      // 血の波形増幅
+      soundPlayedTime = millis();
+      console.debug(`playSound: type="${type}", frequency=${frequency}, duration=${duration}`);
+    }
+
+    function playLowNoise() {
+      if (lowNoise) return;
+      lowNoise = audioContext.createOscillator();
+      lowNoise.type = 'sine';
+      lowNoise.frequency.setValueAtTime(50, audioContext.currentTime);
+      let gainNode = audioContext.createGain();
+      gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+      lowNoise.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      lowNoise.start();
+      let noise = audioContext.createBufferSource();
+      let buffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
+      let data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() < 0.2) ? (Math.random() * 0.1 - 0.05) : 0;
+      }
+      noise.buffer = buffer;
+      let noiseGain = audioContext.createGain();
+      noiseGain.gain.setValueAtTime(0.03, audioContext.currentTime);
+      noise.connect(noiseGain);
+      noiseGain.connect(audioContext.destination);
+      noise.start();
+      noise.loop = true;
+      lowNoise.noise = noise;
+    }
+
+    function stopLowNoise() {
+      if (lowNoise) {
+        lowNoise.stop();
+        lowNoise.noise.stop();
+        lowNoise = null;
+      }
+    }
+
+    window.addEventListener('unload', stopLowNoise);
+  </script>
+</body>
+</html>
