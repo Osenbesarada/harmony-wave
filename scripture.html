@@ -74,33 +74,29 @@
   </div>
   <div class="content" id="content">
     <p class="drip-text">滴りの淵がループを囁く。</p>
-    <!-- 滴りの起源：fish_wave.mp3を再生 -->
     <div class="scripture-button" onclick="playScriptureSound('fish')">滴りの起源</div>
-    <!-- 淵の試練：drip_wave.mp3を再生 -->
     <div class="scripture-button" onclick="playScriptureSound('trial')">淵の試練</div>
-    <!-- 耳の裁き：drip_wave.mp3を再生 -->
     <div class="scripture-button" onclick="playScriptureSound('judgment')">耳の裁き</div>
-    <!-- 家族の誓い：drip_wave.mp3を再生 -->
     <div class="scripture-button" onclick="playScriptureSound('oath')">家族の誓い</div>
-    <!-- 血のループ：drip_wave.mp3を再生 -->
     <div class="scripture-button" onclick="playScriptureSound('loop')">血のループ</div>
     <p>起源の章：一匹の魚<br>この世の最初、ループの使者は「最初の波」を生み、闇に一匹の魚を放った。たった一匹、孤独に泳ぐ魚。老いにより水は涸れ…（続く）</p>
   </div>
   <div class="ad" onclick="showAd()">滴りの淵を聞け…家族に還れ…</div>
   <input type="text" class="code-input" id="code-input" placeholder="コードを入力...">
-  <!-- 音声ファイル：ここにmp3を追加 -->
-  <!-- 音声：起源の章（fish_wave.mp3） -->
+  <!-- 音声ファイル -->
   <audio id="fish-wave" src="assets/fish_wave.mp3" preload="auto" volume="0.8"></audio>
-  <!-- 音声：試練/裁き/誓い/ループ（drip_wave.mp3） -->
   <audio id="drip-wave" src="assets/drip_wave.mp3" preload="auto" volume="0.8"></audio>
-  <!-- 音声：アプリプロモ（app_promo.mp3） -->
   <audio id="promo-wave" src="assets/app_promo.mp3" preload="auto" volume="0.8"></audio>
+  <audio id="find-wave" src="assets/find_wave.mp3" preload="auto" volume="0.8"></audio>
+  <audio id="oto-wave" src="assets/oto_wave.mp3" preload="auto" volume="0.8"></audio>
   <script>
     let audioContext = null;
     let oscillator = null;
     let worshipSound = null;
     let micStream = null;
     let currentAudio = null;
+    let glitchFreq = 0.05;
+    let blackoutFreq = 0.02;
 
     document.addEventListener('DOMContentLoaded', () => {
       try {
@@ -120,19 +116,30 @@
     function draw() {
       try {
         background(0, 0, 0, 50);
-        if (random() < 0.05) { fill(random(255), random(255), random(255), 100); rect(random(width), random(height), random(50, 200), random(10, 50)); }
+        // VHSグリッチ
+        if (random() < glitchFreq) { fill(random(255), random(255), random(255), 100); rect(random(width), random(height), random(50, 200), random(10, 50)); }
+        // 血の滴り
         if (random() < 0.1) { fill(255, 85, 85, 200); ellipse(random(width * 0.3, width * 0.7), random(height), 5, 10); }
+        // 影の耳
         if (frameCount % 60 === 0) {
           push(); translate(width - 20, height / 2 + sin(frameCount * 0.05) * 5); fill(0, 204, 255, 50); arc(0, 0, 20, 20, PI / 4, 3 * PI / 4); pop();
           push(); translate(20, height / 2 - sin(frameCount * 0.05) * 5); arc(0, 0, 20, 20, 5 * PI / 4, 7 * PI / 4); pop();
         }
+        // 血の魚
         if (random() < 0.05) {
           push(); translate(width / 2 + sin(frameCount * 0.02) * 100, height / 2 + cos(frameCount * 0.02) * 100);
           fill(0, 204, 255, 100); ellipse(0, 0, 20, 10); pop();
         }
+        // 淵の渦（OTO用）
+        if (glitchFreq > 0.05) {
+          push(); translate(width / 2, height / 2); rotate(frameCount * 0.02);
+          fill(255, 85, 85, 50); ellipse(0, 0, 100, 50); fill(0, 204, 255, 50); ellipse(0, 0, 50, 100); pop();
+        }
+        // スキャンライン波形
         stroke(0, 204, 255, 50); for (let y = 0; y < height; y += 15) { let x = width / 2 + sin(frameCount * 0.1 + y * 0.02) * 150; line(x - 50, y, x + 50, y); }
+        // 暗転
         if (getTimeState() === 'forbidden' && random() < 0.3) { fill(0, 0, 0); rect(0, 0, width, height); playHorrorSound(); }
-        else if (random() < 0.02) { fill(0, 0, 0); rect(0, 0, width, height); }
+        else if (random() < blackoutFreq) { fill(0, 0, 0); rect(0, 0, width, height); }
       } catch (e) { console.error("p5.js draw failed:", e); }
     }
 
@@ -304,9 +311,8 @@
     function playMorse(code) {
       if (!audioContext) return;
       const morse = {
-        'F': '..-.', 'I': '..', 'S': '---', 'H': '....',
-        'W': '.--', 'A': '.-', 'V': '...-', 'E': '.',
-        'D': '-..', 'R': '.-.', 'P': '.--.', 'L': '.-..', 'O': '---'
+        'F': '..-.', 'I': '..', 'S': '---', 'H': '....', 'W': '.--', 'A': '.-', 'V': '...-', 'E': '.',
+        'D': '-..', 'R': '.-.', 'P': '.--.', 'L': '.-..', 'O': '---', 'N': '-.', 'T': '-'
       };
       let sequence = code.split('').map(c => morse[c]).join('/');
       let t = audioContext.currentTime;
@@ -364,17 +370,43 @@
         setTimeout(() => contentElement.innerHTML = '<p>滴りの波形：<a href="assets/fish_wave.mp3">fish_wave.mp3</a></p>', 30000);
       } else if (input === 'DRIP') {
         contentElement.innerHTML = `<p class="drip-text">滴りが血に変わる…淵が叫ぶ…</p>`;
-        currentAudio = document.getElement trajid('drip-wave');
+        currentAudio = document.getElementById('drip-wave');
         if (currentAudio) currentAudio.volume = 1.0;
         playHorrorSound();
         setTimeout(() => contentElement.innerHTML = `<p class="blood-text">2017年、滴りを試した信者の耳が淵に沈んだ…</p>`, 30000);
       } else if (input === 'LOOP') {
-        contentElement.innerHTML = `<p class="blood-text">血のループが淵をあなたに開く…</p>`;
+        contentElement.innerHTML = `<p class="blood-text">血のループが淵を開く…</p>`;
         currentAudio = document.getElementById('drip-wave');
         if (currentAudio) currentAudio.volume = 1.0;
-        playHorror();
-        setTimeout(() => playMorse('LOOP'), 3000);
-        setTimeout(() => contentElement.innerHTML = `<p class="blood-text">血は淵に還る…ループは永遠に続く…</p>`, 30000);
+        playHorrorSound();
+        setTimeout(() => playMorse('LOOP'), 1000);
+        setTimeout(() => contentElement.innerHTML = `<p class="blood-text">血は淵に還り、ループは永遠…</p>`, 30000);
+      } else if (input === 'FIND') {
+        contentElement.innerHTML = `<p class="blood-text">淵が見つけた…魚の目があなたを…</p>`;
+        currentAudio = document.getElementById('find-wave');
+        if (!currentAudio) {
+          console.error("Audio 'find-wave' not found.");
+          contentElement.innerHTML += '<p class="blood-text">音声ファイルが見つかりません。淵が怒る…</p>';
+          return;
+        }
+        currentAudio.volume = 1.0;
+        blackoutFreq = 0.1;
+        try { currentAudio.play().catch(e => console.error("Failed to play find audio:", e)); } catch (e) { console.error("Error playing find audio:", e); }
+        setTimeout(() => playMorse('FIND'), 1000);
+        setTimeout(() => { window.location.href = 'missing.html?code=FIND'; }, 5000);
+      } else if (input === 'OTO') {
+        contentElement.innerHTML = `<p class="blood-text">耳が聞こえた…淵があなたを飲み込む…</p>`;
+        currentAudio = document.getElementById('oto-wave');
+        if (!currentAudio) {
+          console.error("Audio 'oto-wave' not found.");
+          contentElement.innerHTML += '<p class="blood-text">音声ファイルが見つかりません。淵が怒る…</p>';
+          return;
+        }
+        currentAudio.volume = 1.0;
+        glitchFreq = 0.15;
+        try { currentAudio.play().catch(e => console.error("Failed to play oto audio:", e)); } catch (e) { console.error("Error playing oto audio:", e); }
+        setTimeout(() => playMorse('OTO'), 1000);
+        setTimeout(() => { window.location.href = 'missing.html?code=OTO'; }, 5000);
       }
     }
 
