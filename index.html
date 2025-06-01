@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>波の書：ホーム</title>
+  <title>HarmonyWave</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=VCR+OSD+Mono&display=swap" rel="stylesheet">
   <style>
@@ -50,8 +50,7 @@
     .shake { animation: shake 0.3s; }
     @keyframes shake { 0% { transform: translate(0, 0); } 25% { transform: translate(-3px, 3px); } 50% { transform: translate(3px, -3px); } 75% { transform: translate(-3px, 3px); } 100% { transform: translate(0, 0); } }
     .ad {
-      position: fixed; bottom: 20px; right: 20px; color: #ff5555; font-size: 16px;
-      text-decoration: underline; cursor: pointer;
+      position: fixed; bottom: 20px; right: 20px; color: #ff5555; font-size: 16px; text-decoration: underline; cursor: pointer;
     }
     .ad:hover { color: #aa0000; text-shadow: 0 0 5px #550000; }
     .code-input {
@@ -64,7 +63,7 @@
 <body>
   <div class="vhs-overlay"></div>
   <div class="scanlines"></div>
-  <div class="header">波の書</div>
+  <div class="header">HarmonyWave</div>
   <div class="menu">
     <a href="index.html">ホーム</a>
     <a href="products.html">製品</a>
@@ -74,14 +73,11 @@
   </div>
   <div class="content" id="content">
     <p class="drip-text">滴りの淵へようこそ…魚の家族があなたを待つ。</p>
-    <!-- 滴りの起源：fish_wave.mp3を再生 -->
     <div class="scripture-button" onclick="playScriptureSound('fish')">滴りの魚を聞く</div>
     <p>最初の波は闇に生まれ、一匹の魚がループを紡いだ。滴りの淵は耳を求め、家族は還りを望む。教団の聖典に従い、波動粉末で耳を清めなさい…</p>
   </div>
   <div class="ad" onclick="showAd()">滴りの淵を聞け…家族に還れ…</div>
   <input type="text" class="code-input" id="code-input" placeholder="コードを入力...">
-  <!-- 音声ファイル：ここにmp3を追加 -->
-  <!-- 音声：起源の章（fish_wave.mp3） -->
   <audio id="fish-wave" src="assets/fish_wave.mp3" preload="auto" volume="0.8"></audio>
   <script>
     let audioContext = null;
